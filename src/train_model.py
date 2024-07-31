@@ -1,3 +1,4 @@
+# train_model.py
 import sys
 import os
 import torch
@@ -6,35 +7,31 @@ import torch.optim as optim
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from PIL import Image
+from utils.dataset import CustomDataset
+from models.edsr import EDSR
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from models.edsr import EDSR
-from utils.dataset import CustomDataset
-
 # Initialize data transformations
 transform = transforms.Compose([
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(),
-    transforms.RandomRotation(10),
-    transforms.Resize((128, 128)),
+    transforms.Resize((64, 64)),  # Smaller size for testing
     transforms.ToTensor()
 ])
 
 # Initialize dataset and dataloader
 dataset = CustomDataset(image_folder=r'/config/workspace/data/images', transform=transform)
-dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
+dataloader = DataLoader(dataset, batch_size=2, shuffle=True)  # Reduced batch size
 
 # Initialize the model, loss function, optimizer, and learning rate scheduler
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = EDSR().to(device)
+model = EDSR(num_channels=3, num_blocks=8, num_features=32, scale_factor=2).to(device)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
-scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.7)
+scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.7)
 
 # Training loop
-num_epochs = 10
+num_epochs = 5  # Reduced number of epochs for faster testing
 for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0

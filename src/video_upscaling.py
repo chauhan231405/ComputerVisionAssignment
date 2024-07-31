@@ -1,3 +1,4 @@
+# upscaling_video.py
 import sys
 import os
 import torch
@@ -5,21 +6,20 @@ import cv2
 from PIL import Image
 from torchvision import transforms
 import numpy as np
+from models.edsr import EDSR
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from models.edsr import EDSR
-
 # Load the trained model
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = EDSR().to(device)
-model.load_state_dict(torch.load(r'/config/workspace/models/trained_model.pth'))
+model = EDSR(num_channels=3, num_blocks=8, num_features=32, scale_factor=2).to(device)
+model.load_state_dict(torch.load(r'/config/workspace/src/models/trained_model.pth'))
 model.eval()
 
 # Define input and output paths
 input_folder = r'/config/workspace/data/images'
-output_video_path = r'/config/workspace/data/outputVideo'
+output_video_path = r'/config/workspace/data/upscaled_video.mp4'
 
 # Prepare video writer
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -29,7 +29,7 @@ video_writer = cv2.VideoWriter(output_video_path, fourcc, fps, frame_size)
 
 # Prepare transformation
 transform = transforms.Compose([
-    transforms.Resize((128, 128)),  # Ensure consistent size for model input
+    transforms.Resize((64, 64)),  # Ensure consistent size for model input
     transforms.ToTensor()
 ])
 
@@ -44,7 +44,7 @@ for filename in sorted(os.listdir(input_folder)):
             output = model(image).squeeze().cpu()
 
         output_image = transforms.ToPILImage()(output)
-        output_frame = output_image.resize(frame_size, Image.LANCZOS)  # Resize to final frame size
+        output_frame = output_image.resize(frame_size, Image.Resampling.LANCZOS)  # Resize to final frame size
 
         output_frame = cv2.cvtColor(np.array(output_frame), cv2.COLOR_RGB2BGR)  # Convert to BGR for OpenCV
         
@@ -54,9 +54,6 @@ for filename in sorted(os.listdir(input_folder)):
         video_writer.write(output_frame)
 
 video_writer.release()
-
-# Check if file was created successfully
-print(f'Output video path: {output_video_path}')
 
 # Check if file was created successfully
 if os.path.exists(output_video_path):
