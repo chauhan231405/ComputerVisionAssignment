@@ -10,7 +10,6 @@ from PIL import Image
 from utils.dataset import CustomDataset
 from models.edsr import EDSR
 
-# Add the parent directory to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Initialize data transformations
